@@ -468,26 +468,24 @@ function fadeOut() {
 
 
 // ==============================
-// 🚫 歩行検知（進化版・安定型）
+// 🚫 歩行検知（最終安定版）
 // ==============================
 
 let isWalking = false;
-let overlay = document.getElementById("walking-overlay");
+const overlay = document.getElementById("walking-overlay");
 
-// 履歴データ
+// 履歴
 let accelHistory = [];
 
-// 設定値（チューニング可能）
-const WINDOW_SIZE = 6;       // 平均用
-const START_THRESHOLD = 15;  // 開始
-const STOP_THRESHOLD  = 10;  // 停止
-const MIN_CONTINUE = 4;      // 継続回数
-const STOP_TIME = 1800;      // 停止判定
+const WINDOW_SIZE = 6;
+const START_THRESHOLD = 18;
+const STOP_THRESHOLD  = 8;
+const STOP_TIME = 1500;
 
 let moveCount = 0;
-let lastMoveTime = 0;
+let lastMoveTime = Date.now();
 
-// iPhone対応
+// ✅ iPhone対応
 if (typeof DeviceMotionEvent.requestPermission === "function") {
   document.body.addEventListener("click", async () => {
     try { await DeviceMotionEvent.requestPermission(); }
@@ -508,39 +506,32 @@ window.addEventListener("devicemotion", (event) => {
     Math.abs(acc.y || 0) +
     Math.abs(acc.z || 0);
 
-  // 履歴追加
+  // 履歴更新
   accelHistory.push(total);
   if (accelHistory.length > WINDOW_SIZE) {
     accelHistory.shift();
   }
 
-  // 平均値算出
   const avg =
-    accelHistory.reduce((a, b) => a + b, 0) /
-    accelHistory.length;
+    accelHistory.reduce((a,b)=>a+b,0) / accelHistory.length;
 
-  // ============================
-  // ▶ 歩行開始判定（平均＋継続）
-  // ============================
+  // ✅ 歩行開始判定
   if (avg > START_THRESHOLD) {
     moveCount++;
-    lastMoveTime = Date.now();
   } else {
     moveCount = Math.max(0, moveCount - 1);
   }
 
-  if (!isWalking && moveCount >= MIN_CONTINUE) {
+  if (!isWalking && moveCount >= 4) {
     isWalking = true;
 
     overlay.style.display = "flex";
-    setTimeout(() => overlay.style.opacity = "1", 10);
+    setTimeout(()=>overlay.style.opacity="1",10);
 
     console.log("🚶 歩行開始");
   }
 
-  // ============================
-  // ▶ 歩行中の更新
-  // ============================
+  // ✅ 歩行中のみ更新（超重要）
   if (isWalking && avg > STOP_THRESHOLD) {
     lastMoveTime = Date.now();
   }
@@ -548,24 +539,26 @@ window.addEventListener("devicemotion", (event) => {
 });
 
 // ==============================
-// ▶ 停止判定
+// 停止判定
 // ==============================
 setInterval(() => {
 
-  if (isWalking && (Date.now() - lastMoveTime > STOP_TIME)) {
+  const diff = Date.now() - lastMoveTime;
+
+  if (isWalking && diff > STOP_TIME) {
 
     isWalking = false;
 
     overlay.style.opacity = "0";
 
-    setTimeout(() => {
+    setTimeout(()=>{
       overlay.style.display = "none";
-    }, 300);
+    },300);
 
     console.log("🛑 停止");
   }
 
-}, 300);
+}, 200);
 
 /* =========================================
    2. 構内図「イメージ」背景
