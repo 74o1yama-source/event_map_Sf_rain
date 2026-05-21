@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>展示ブース一覧</title>
+
+<style>
+  body {
+    font-family: sans-serif;
+  }
+  .booth {
+    padding: 12px 12px 12px 0;
+    border-bottom: 1px solid #ccc;
+  }
+  .active {
+    background-color: #eef5ff;
+    border-left: 6px solid #1d6fdc;
+  }
+  .booth .schedule {
+      display: block;     /* ← これで改行 */
+      margin-left: 6ch;
+      font-size: 0.95em;
+      color: red;
+    }
+</style>
+</head>
+
+<body>
+
+<div style="margin-bottom:16px; display:flex; gap:10px;">
+  <a href="index.html"
+     style="
+       padding:8px 14px;
+       background:#1d6fdc;
+       color:#fff;
+       text-decoration:none;
+       border-radius:6px;">
+    ＭＡＰへ戻る
+  </a>
+
+</div>
+
+
+<h1>
+  屋外展示ブース一覧＆実演スケジュール_01～11
+</h1>
+
+</div>
+<div id="O" class="booth">【送電部門】
+</div>
+<div id="0" class="booth">01：車高調整式下草刈り機
+</div>
+<div id="0" class="booth">02：ドローンによる送電設備自動点検（POWER GRID Check)
+</div>
+<div id="0" class="booth">03：四脚ロボット
+</div>
+<div id="0" class="booth">04：運搬ドローン
+</div>
+<div id="0" class="booth">【変電部門】
+</div>
+<div id="05" class="booth">05：ドローンによる変電所巡視
+</div>
+<div id="06" class="booth">06：受変電キュービクルのセンシング技術
+</div>
+<div id="0" class="booth">【配電部門】
+</div>
+<div id="07" class="booth">07：配電用伐採車両クアッドソー・フェラーバンチャ
+  <span class="schedule">👀実演スケジュール：10:20、11:00、11:40、13:00、13:40、14:20、15:00、15:40</span>
+</div>
+<div id="08" class="booth">08：間接活線工具
+</div>
+<div id="0" class="booth">【通信部門】
+</div>
+<div id="09" class="booth">09：安全AIカメラを活用した墜落災害防止
+</div>
+<div id="10" class="booth">10：高所作業車の逸走防止インターロック 
+</div>
+<div id="0" class="booth">【営業】
+</div>
+<div id="11" class="booth">11：フォトスポット（変電所カード）
+</div>
+
+<h1>
+  屋内展示ブース一覧＆実演スケジュール_12～34
+</h1>
+
+<div id="0" class="booth">【送電部門】
+</div>
+<div id="12" class="booth">12：地中ケーブル用FRP製支持材
+</div>
+<div id="13" class="booth">13：鉄塔用ボルト緩み止め金具　スマートスプリング
+</div>
+<div id="14" class="booth">14：歩行用アシストスーツの山間部活用
+</div>
+<div id="15" class="booth">15：地中線埋設立合
+</div>
+<div id="16" class="booth">16：ドローンシミュレータ訓練
+</div>
+<div id="17" class="booth">17：伐採ドローンの開発
+</div>
+<div id="18" class="booth">18：自動昇木芯止め機
+</div>
+<div id="19" class="booth">19：【出張 企画室】GAxIAプラットフォームサービス
+</div>
+<div id="0" class="booth">【変電部門】
+</div>
+<div id="20" class="booth">20：状態監視保全システムによる変電設備のセンシング　実演 <span class="schedule">👀実演スケジュール：10:05、11:40、12:00、12:40、13:20、14:00、14:40、15:20</span>
+</div>
+<div id="21" class="booth">21：カーボンニュートラルの実現に向けた変電設備
+</div>
+<div id="22" class="booth">22：植物油変圧器
+</div>
+<div id="23" class="booth">23：変電機器の保守技術
+</div>
+<div id="24" class="booth">24：エンジニアリング支援ツール
+</div>
+<div id="25" class="booth">25：海外コンサル事例
+</div>
+<div id="0" class="booth">【配電部門】
+</div>
+<div id="26" class="booth">26：蓄電池を活用した水力マイクログリッド系統の安定化
+</div>
+<div id="27" class="booth">27：AIを活用した配電設備の劣化判定
+</div>
+<div id="28" class="booth">28：ポリエチレン線カバーの水平リサイクル
+</div>
+<div id="29" class="booth">29：柱上変圧器の絶縁油リサイクル
+</div>
+<div id="0" class="booth">【コンサル】
+</div>
+<div id="30" class="booth">30：技術ＰＲ実績
+</div>
+<div id="31" class="booth">31：コンサルティングサービス＆Conote
+</div>
+<div id="0" class="booth">【系統部門】
+</div>
+<div id="32" class="booth">32：地域別電力需要予測システム（DFES）
+</div>
+<div id="0" class="booth">【用地部門】
+</div>
+<div id="33" class="booth">33：ドローン・ウェアラブルカメラ等の映像を利用した地権者との境界立会
+</div>
+<div id="34" class="booth">34：ＡＩエージェントとの会話による交渉暗黙知の抽出
+</div>
+
+<script>
+  // ハッシュ(#I-05 など)を取得
+  const id = location.hash.replace('#', '');
+
+  if (id) {
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.add('active');
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+</script>
+
+</body>
+</html>

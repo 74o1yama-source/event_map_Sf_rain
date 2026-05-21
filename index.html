@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>エンジフェア２０２６ ＷＥＢマップ（雨天版）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Leaflet CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  body { margin:0; font-family: "Segoe UI", sans-serif; }
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow-y: auto;
+}
+
+#map {
+  height: 75vh;   /* ← 上75% */
+  background-color: black;
+  touch-action: pan-y;
+  position: relative;
+}
+
+
+#map-instruction {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+
+  padding: 8px 10px;
+  border-radius: 8px;
+
+  font-size: 12px;
+  line-height: 1.4;
+
+  z-index: 1000;
+  pointer-events: none;
+}
+
+
+#checked-list {
+  height: 25vh;   /* ← 下35% */
+  overflow-y: auto;
+  background: rgba(255,255,255,0.95);
+}
+
+
+#checked-list .title {
+  display: flex;
+  align-items: center;
+  gap: 8px; 
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: 15px;
+}
+
+.nav-links {
+  margin-left: auto;
+}
+
+#clear-all-btn {
+  margin-left: 8px;
+}
+
+
+#checked-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#checked-items li {
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+}
+
+#checked-items li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px;
+  font-size: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+#clear-all-btn,
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1;
+
+  border-radius: 4px;
+  box-sizing: border-box;
+
+  background: #555;   /* ←一括削除と同じ色にするなら */
+  color: #fff;
+
+  text-decoration: none;  /* ←アンダーバー消す */
+  border: none;
+  cursor: pointer;
+}
+
+.nav-links a {
+  background: #1d6fdc;  /* 青 */
+}
+
+#clear-all-btn {
+  background: #555;     /* グレー */
+}
+
+#clear-all-btn:active,
+.nav-links a:active {
+  background: inherit;  /* ←押しても色変えない */
+}
+
+
+#clear-all-btn:hover {
+  background: #333;
+}
+
+.remove-btn {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.remove-btn:hover {
+  background: #c0392b;
+}
+
+  .header {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(255,255,255,0.95);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+
+.leaflet-popup-content .popup-title {
+    font-weight: bold;
+    font-size: 30px;
+    margin-bottom: 6px;
+  }
+
+.blink-dot {
+  width: 25px;
+  height: 25px;
+  background: blue;
+  border-radius: 50%;
+  box-shadow: 0 0 10px blue;
+  animation: blink 1s infinite;
+}
+
+/* ボタン */
+#toggle-instruction-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: #1d6fdc;
+  color: #fff;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: opacity 0.6s ease-out;
+}
+
+/* 説明（初期は非表示） */
+#map-instruction {
+  display: none;
+  opacity: 0;
+  transition: opacity 1.5s ease-out;
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  z-index: 1000;
+}
+
+@keyframes blink {
+  0% { opacity:1; transform: scale(1); }
+  50% { opacity:0.3; transform: scale(1.6); }
+  100% { opacity:1; transform: scale(1); }
+}
+
+
+
+  /* スマホ操作を意識 */
+  .leaflet-control-layers {
+    font-size: 14px;
+  }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+}
+
+.nav-links a.secondary {
+  background: #555;
+}
+
+#walking-overlay {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background: rgba(0,0,0,0.9);
+  color: #fff;
+
+  font-size: 20px;
+  font-weight: bold;
+
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+}
+</style>
+
+</head>
+
+<body>
+<div id="map">
+  <button id="toggle-instruction-btn">ℹ️ 操作説明</button>
+  <div id="map-instruction">
+【マップ機能＆操作方法】<br>
+・マップ右欄のブース名をクリックするとブース場所確認＆✅チェックしたブースにリスト追加できます<br>
+・マップ上のブース番号をクリックすると概要が表示されます<br>
+👉 1本指で上下スクロール<br>
+👉👉 2本指で地図操作（移動・拡大縮小）
+  </div>
+<div id="walking-overlay">
+  🚫 歩行中は操作できません
+</div>
+</div>
+
+<div id="checked-list">
+<div class="title">
+  <span>✅ チェックしたブース</span>
+  <div class="nav-links">
+    <a href="booth_detail.html">ブース一覧＆実演時間</a>
+  </div>
+  <button id="clear-all-btn">一括解除</button>
+</div>
+
+  <ul id="checked-items"></ul>
+</div>
+
+<script>
+/* =========================================
+   1. マップ初期化（構内ローカル座標）
+========================================= */
+const map = L.map("map", {
+  crs: L.CRS.Simple,
+  minZoom: -2,
+  maxZoom: 2,
+  zoomSnap: 0.1,
+  zoomDelta: 0.2,
+  zoomControl: false,   // ← ★これ追加
+  dragging: !L.Browser.mobile,
+  tap: false,
+  scrollWheelZoom: false,
+  doubleClickZoom: false,
+  attributionControl: false
+});
+
+L.control.attribution({
+  position: 'topright'
+}).addTo(map);
+
+L.control.zoom({
+  position: 'bottomleft'
+}).addTo(map);
+
+if (L.Browser.mobile) {
+
+  let startPoint = null;
+
+  map.dragging.disable();
+
+  map.on("touchstart", function (e) {
+    const t = e.originalEvent.touches[0];
+    startPoint = { x: t.clientX, y: t.clientY };
+  });
+
+  map.on("touchmove", function (e) {
+    const t = e.originalEvent.touches[0];
+
+    const dx = Math.abs(t.clientX - startPoint.x);
+    const dy = Math.abs(t.clientY - startPoint.y);
+
+    // ★一定以上動いたらドラッグON
+    if (dx + dy > 10) {
+      map.dragging.enable();
+    }
+  });
+
+  map.on("touchend", function () {
+    map.dragging.disable();
+  });
+}
+
+function fixMapSize() {
+  map.invalidateSize();
+}
+
+setTimeout(fixMapSize, 0);
+setTimeout(fixMapSize, 300);
+setTimeout(fixMapSize, 800);
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(fixMapSize, 300);
+});
+
+const checkedSet = new Set();
+
+function saveChecked() {
+  localStorage.setItem(
+    "checkedBooths",
+    JSON.stringify([...checkedSet])
+  );
+}
+
+
+function sortCheckedList() {
+  const ul = document.getElementById("checked-items");
+  const items = Array.from(ul.children);
+
+  items.sort((a, b) => {
+    const idA = parseInt(a.dataset.id, 10);
+    const idB = parseInt(b.dataset.id, 10);
+    return idA - idB;
+  });
+
+  items.forEach(li => ul.appendChild(li));
+}
+
+function addCheckedItem(p) {
+  if (checkedSet.has(p.id)) return;
+
+  checkedSet.add(p.id);
+  saveChecked();   // ★追加
+
+  const ul = document.getElementById("checked-items");
+  if (!ul) return;
+
+  const li = document.createElement("li");
+  li.setAttribute("data-id", p.id);
+
+  const text = document.createElement("span");
+  text.textContent = `${p.id} ${p.name}`;
+
+  const btn = document.createElement("button");
+  btn.textContent = "解除";
+  btn.className = "remove-btn";
+
+  btn.addEventListener("click", () => {
+    checkedSet.delete(p.id);
+    li.remove();
+    saveChecked();   // ★ここも重要
+  });
+
+  li.appendChild(text);
+  li.appendChild(btn);
+  ul.appendChild(li);
+  sortCheckedList();
+}
+
+ // ✅ 一括解除処理
+document.getElementById("clear-all-btn").addEventListener("click", () => {
+  checkedSet.clear();
+
+  const ul = document.getElementById("checked-items");
+  while (ul.firstChild) {
+    ul.removeChild(ul.firstChild);
+  }
+
+  saveChecked();   // ★追加
+});
+
+
+function loadChecked() {
+  const data = localStorage.getItem("checkedBooths");
+  if (!data) return;
+
+  const ids = JSON.parse(data);
+
+  ids.forEach(id => {
+    // outdoorBooths から探す
+    const booth = outdoorBooths.features.find(f => f.properties.id === id);
+    if (booth) {
+      addCheckedItem(booth.properties);
+    }
+  });
+}
+
+
+const btn = document.getElementById("toggle-instruction-btn");
+const box = document.getElementById("map-instruction");
+
+let timer = null;
+
+btn.addEventListener("click", () => {
+
+  // 手動閉じる
+  if (box.style.display === "block" && box.style.opacity === "1") {
+    fadeOut();
+    return;
+  }
+
+  // 表示
+  box.style.display = "block";
+
+  setTimeout(() => {
+    box.style.opacity = "1";
+  }, 10);
+
+  btn.textContent = "✖ 閉じる";
+
+  if (timer) clearTimeout(timer);
+
+  // ✅ 少し止めてからフェード開始（ここが自然さのコツ）
+  timer = setTimeout(() => {
+    fadeOut();
+  }, 7000); // ←9秒後に開始 → 1秒かけて消える
+});
+
+// フェードアウト関数
+function fadeOut() {
+  box.style.opacity = "0";
+
+  setTimeout(() => {
+    box.style.display = "none";
+    btn.textContent = "ℹ️ 操作説明";
+  }, 600); // ←CSSと合わせる
+}
+
+
+// ==============================
+// 🚫 歩行中操作禁止（安定版）
+// ==============================
+
+let lastMoveTime = 0;
+let isWalking = false;
+
+const overlay = document.getElementById("walking-overlay");
+
+// ✅ iPhone対応（初回タップで許可）
+if (typeof DeviceMotionEvent.requestPermission === "function") {
+  document.body.addEventListener("click", async () => {
+    try {
+      const res = await DeviceMotionEvent.requestPermission();
+      console.log("motion permission:", res);
+    } catch (e) {
+      console.log("motion permission denied");
+    }
+  }, { once: true });
+}
+
+// ✅ 加速度検知
+window.addEventListener("devicemotion", (event) => {
+
+  const acc = event.accelerationIncludingGravity;
+  if (!acc) return;
+
+  const total =
+    Math.abs(acc.x || 0) +
+    Math.abs(acc.y || 0) +
+    Math.abs(acc.z || 0);
+
+  // ✅ 歩行っぽい揺れを検知
+  if (total > 15) {
+    lastMoveTime = Date.now();
+
+    if (!isWalking) {
+      isWalking = true;
+
+      // フェードイン
+      overlay.style.display = "flex";
+      setTimeout(() => {
+        overlay.style.opacity = "1";
+      }, 10);
+    }
+  }
+
+});
+
+// ✅ 停止判定（動き止まったら解除）
+setInterval(() => {
+
+  if (Date.now() - lastMoveTime > 1500) {
+
+    if (isWalking) {
+      isWalking = false;
+
+      // フェードアウト
+      overlay.style.opacity = "0";
+
+      setTimeout(() => {
+        overlay.style.display = "none";
+      }, 300);
+    }
+
+  }
+
+}, 300);
+
+
+/* =========================================
+   2. 構内図「イメージ」背景
+   ※本番では imageOverlay を実図PNGに差替
+========================================= */
+const bounds = [[0,0],[1000,1500]];
+map.fitBounds(bounds);
+
+/* SVGで簡易構内図イメージを生成（即見れる用） */
+L.imageOverlay(
+  "./substation_map.png",
+  bounds
+).addTo(map);
+
+/* =========================================
+   3. レイヤ定義
+========================================= */
+const outdoorLayer = L.layerGroup();
+const indoorLayer  = L.layerGroup();
+const highlightLayer = L.layerGroup().addTo(map);
+const routeLayerA  = L.layerGroup();
+const routeLayerB  = L.layerGroup();
+const routeLayerC  = L.layerGroup();
+
+
+/* =========================================
+   4. GeoJSON相当データ（HTML内埋め込み）
+========================================= */
+/* 地図上のブース番号からの概要を標示するコード　*/
+const outdoorBooths = {
+  "type":"FeatureCollection",
+  "features":[
+    { "type":"Feature","properties":{"id":"01","name":"車高調整式下草刈り機","detail":"ハイドロマチック・モア導入による小径木伐採の省力化に向けた取組紹介および伐採実演と操作体験","time":"10:20、11:20、12:20、13:20、14:20、15:20","image":"01.png"},
+
+      "geometry":{"type":"Point","coordinates":[1010,660]}},
+
+    { "type":"Feature","properties":{"id":"02","name":"ドローンによる送電設備自動点検（POWER GRID Check)　","detail":"ドローンによる送電鉄塔の定期点検を実演。設備情報と座標情報を入力・取得することで、誰でも安全に高品質な画像を取得","time":"10:05、11:00、12:00、13:00、14:00、15:00","image":"02.png"},
+      "geometry":{"type":"Point","coordinates":[1025,630]}},
+
+    { "type":"Feature","properties":{"id":"03","name":"四脚ロボット","detail":"四脚ロボットの稼働を実演。適用可能現場や映像取得等の説明","time":"10:05、11:00、12:00、13:00、14:00、15:00","image":"03.png"},
+      "geometry":{"type":"Point","coordinates":[1045,600]}},
+
+    { "type":"Feature","properties":{"id":"04","name":"運搬ドローン","detail":"ドローンを活用した資材運搬による作業環境のかいぜんに向けた取組紹介およびドローン運搬実演","time":"10:40、11:40、12:40、13:40、14:40、15:40","image":"04.png"},
+      "geometry":{"type":"Point","coordinates":[1050,570]}},
+
+    { "type":"Feature","properties":{"id":"05","name":"ドローンによる変電所巡視","detail":"ドローンの自動飛行による変圧器（変電所設備）の巡視を実演","time":"10:20、11:20、12:20、13:20、14:20、15:20","image":"05.png"},
+      "geometry":{"type":"Point","coordinates":[1060,540]}},
+
+    { "type":"Feature","properties":{"id":"06","name":"受変電キュービクルのセンシング技術","detail":"受変電設備向けの後付けできる状態監視ソリューションを紹介","time":"","image":"06.png"},
+      "geometry":{"type":"Point","coordinates":[430,640]}},
+
+    { "type":"Feature","properties":{"id":"07","name":"配電用伐採車両クアッドソー，フェラーバンチャ","detail":"配電用伐採車両2台を用いた伐採実演（枝打ち・丸太切り）","time":"10:20、11:00、11:40、13:00、13:40、14:20、15:00、15:40","image":"07.png"},
+      "geometry":{"type":"Point","coordinates":[750,630]}},
+
+    { "type":"Feature","properties":{"id":"08","name":"間接活線工具","detail":"配電線の間接活線工法移行に向けて開発したアシストアーム、自家用仮送工具並びに間接工具の展示","time":"","image":"08.png"},
+      "geometry":{"type":"Point","coordinates":[950,630]}},
+
+    { "type":"Feature","properties":{"id":"09","name":"安全AIカメラを活用した墜落災害防止","detail":"送電墜落防止ハード対策のうち，安全カメラAIを使用した無胴綱状態の検知実演","time":"","image":"09.png"},
+      "geometry":{"type":"Point","coordinates":[430,600]}},
+
+    { "type":"Feature","properties":{"id":"10","name":"高所作業車の逸走防止インターロック","detail":"高所作業車の逸走による災害を防止するための輪留めインターロック機構の実機展示","time":"","image":"10.png"},
+      "geometry":{"type":"Point","coordinates":[430,560]}},
+
+    { "type":"Feature","properties":{"id":"11","name":"フォトスポット（変電所カード）","detail":"オリジナルの変電所カード風写真を撮影","time":"","image":"11.png"},
+      "geometry":{"type":"Point","coordinates":[560,610]}},
+
+    { "type":"Feature","properties":{"id":"12","name":"地中ケーブル用FRP製支持材 ","detail":"高寿命化，メンテフリーのFRP製ケーブル支持材の特長・仕様を実機展示","time":"","image":"12.png"},
+      "geometry":{"type":"Point","coordinates":[390,195]}},
+
+    { "type":"Feature","properties":{"id":"13","name":"鉄塔用ボルト緩み止め金具　スマートスプリング","detail":"鉄塔ボルト緩み対策品HSEの改良版「スマートスプリング」の展示・取付実演","time":"","image":"13.png"},
+      "geometry":{"type":"Point","coordinates":[440,195]}},
+
+    { "type":"Feature","properties":{"id":"14","name":"歩行用アシストスーツの山間部活用","detail":"歩行アシストスーツの導入による山地の送電作業における作業負担低減に向けた取組紹介および歩行体験","time":"","image":"14.png"},
+      "geometry":{"type":"Point","coordinates":[710,195]}},
+
+    { "type":"Feature","properties":{"id":"15","name":"地中線埋設立会","detail":"ANDPADのLiDAR機能の実演、体験","time":"","image":"15.png"},
+      "geometry":{"type":"Point","coordinates":[805,195]}},
+
+    { "type":"Feature","properties":{"id":"16","name":"ドローンシミュレータ訓練","detail":"ドローンシュミレータの導入による効率的な操縦技能習得環境の構築に向けた取組紹介と訓練体験","time":"","image":"16.png"},
+      "geometry":{"type":"Point","coordinates":[860,195]}},
+
+    { "type":"Feature","properties":{"id":"17","name":"伐採ドローンの開発","detail":"ドローン活用による伐採作業の省力化に向けた取組紹介","time":"","image":"17.png"},
+      "geometry":{"type":"Point","coordinates":[915,195]}},
+
+    { "type":"Feature","properties":{"id":"18","name":"自動昇木芯止め機","detail":"自動昇木機能付き芯止め機械（エディ）による芯止め作業の省力化に向けた取組紹介および実機展示","time":"","image":"18.png"},
+      "geometry":{"type":"Point","coordinates":[975,195]}},
+
+    { "type":"Feature","properties":{"id":"19","name":"【出張 企画室】GAxIAプラットフォームサービス","detail":"教育・施工計画・設備保守業務等の高度化・効率化を支援するため、現場や設備の状況を高精度に3次元で再現","time":"","image":"19.png"},
+      "geometry":{"type":"Point","coordinates":[845,320]}},
+
+    { "type":"Feature","properties":{"id":"20","name":"状態監視保全システムによる変電設備のセンシング","detail":"実際に変電機器を動かす様子を見ながら、設備を見守る状態監視保全システムを分かりやすく紹介する体験展示","time":"10:05、11:40、12:00、12:40、13:20、14:00、14:40、15:20","image":"20.png"},
+      "geometry":{"type":"Point","coordinates":[510,250]}},
+
+    { "type":"Feature","properties":{"id":"20","name":"状態監視保全システムによる変電設備のセンシング","detail":"実際に変電機器を動かす様子を見ながら、設備を見守る状態監視保全システムを分かりやすく紹介する体験展示","time":"10:05、11:40、12:00、12:40、13:20、14:00、14:40、15:20","image":"20.png"},
+      "geometry":{"type":"Point","coordinates":[510,195]}},
+
+    { "type":"Feature","properties":{"id":"21","name":"カーボンニュートラルの実現に向けた変電設備","detail":"カーボンニュートラル実現に向け、SF₆ガスレス機器の早期採用の必要性と当社の採用方針の紹介","time":"","image":"21.png"},
+      "geometry":{"type":"Point","coordinates":[630,195]}},
+
+    { "type":"Feature","properties":{"id":"22","name":"植物油変圧器","detail":"植物油変圧器導入の紹介，鉱油と植物油の展示","time":"","image":"22.png"},
+      "geometry":{"type":"Point","coordinates":[440,250]}},
+
+    { "type":"Feature","properties":{"id":"23","name":"変電機器の保守技術","detail":"変電機器の保守の実態や取り組み（直流電源装置を用いた対応）を断路器を用いて紹介","time":"","image":"23.png"},
+      "geometry":{"type":"Point","coordinates":[630,250]}},
+
+    { "type":"Feature","properties":{"id":"24","name":"エンジニアリング支援ツール","detail":"遮断器・変圧器の全台の更新時期をシミュレーションし保全計画・手の内化・予備品確保等をサポートする管理システムを紹介","time":"","image":"24.png"},
+      "geometry":{"type":"Point","coordinates":[715,250]}},
+
+    { "type":"Feature","properties":{"id":"25","name":"海外コンサル事例","detail":"海外コンサルティングサービス事例の紹介","time":"","image":"25.png"},
+      "geometry":{"type":"Point","coordinates":[905,320]}},
+
+    { "type":"Feature","properties":{"id":"26","name":"蓄電池を活用した水力マイクログリッド系統の安定化","detail":"水力発電を主電源としたマイクログリッド系統を安定化させる蓄電池制御システムを開発","time":"","image":"26.png"},
+      "geometry":{"type":"Point","coordinates":[325,195]}},
+
+    { "type":"Feature","properties":{"id":"27","name":"AIを活用した配電設備の劣化判定","detail":"ＡＩを活用して電柱や柱上変圧器等の劣化傾向を把握・精緻化","time":"","image":"27.png"},
+      "geometry":{"type":"Point","coordinates":[260,250]}},
+
+    { "type":"Feature","properties":{"id":"28","name":"ポリエチレン線カバーの水平リサイクル","detail":"ポリエチレン線カバーのリサイクルを紹介","time":"","image":"28.png"},
+      "geometry":{"type":"Point","coordinates":[315,250]}},
+
+    { "type":"Feature","properties":{"id":"29","name":"柱上変圧器の絶縁油リサイクル","detail":"配電線用柱上変圧器の絶縁油リサイクルを紹介、鉱油とリサイクル油の展示","time":"","image":"29.png"},
+      "geometry":{"type":"Point","coordinates":[370,250]}},
+
+    { "type":"Feature","properties":{"id":"30","name":"技術ＰＲ実績","detail":"中部電力パワーグリッドがこれまで発信・制作したパネル、動画、アプローチ品等","time":"","image":"30.png"},  "geometry":{"type":"Point","coordinates":[155,195]}},
+
+    { "type":"Feature","properties":{"id":"31","name":"コンサルティングサービス＆Conote","detail":"コンサルティングサービス＆Conoteの紹介（保全合理化・更新計画の策定・センシング・ケーブル・ドローン）","time":"","image":"31.png"},
+
+      "geometry":{"type":"Point","coordinates":[960,320]}},
+
+    { "type":"Feature","properties":{"id":"32","name":"地域別電力需要予測システム（DFES）","detail":"近年急速に拡大するＤＥＲ（ＰＶ、ＥＶ，蓄電池、ヒートポンプ等）を加味した設備形成を実現する予測システムを紹介","time":"","image":"32.png"},
+      "geometry":{"type":"Point","coordinates":[170,250]}},
+
+    { "type":"Feature","properties":{"id":"33","name":"ドローン・ウェアラブルカメラ等の映像を利用した地権者との境界立会","detail":"ドローン・ウェアラブルカメラ等の映像を利用した地権者との境界立会について紹介","time":"","image":""},
+      "geometry":{"type":"Point","coordinates":[220,195]}},
+
+    { "type":"Feature","properties":{"id":"34","name":"ＡＩエージェントとの会話による交渉暗黙知の抽出","detail":"ＡＩエージェントとの会話による交渉暗黙知の抽出について紹介","time":"","image":""},
+      "geometry":{"type":"Point","coordinates":[275,195]}},
+  ]
+};
+
+
+
+    /* 以下はブース一覧からブース場所チェック用　*/
+
+const BoothsCheck = {  "type": "FeatureCollection",
+  "features": [
+    { "type":"Feature","properties":{"id":"01","name":"車高調整式下草刈り機","detail":"ハイドロマチック・モア導入による小径木伐採の省力化に向けた取組紹介および伐採実演と操作体験","time":"10:20、11:20、12:20、13:20、14:20、15:20","image":"01.png"},
+
+      "geometry":{"type":"Point","coordinates":[1140,903]}},
+
+    { "type":"Feature","properties":{"id":"02","name":"ドローンによる送電設備自動点検（POWER GRID Check)","detail":"送電鉄塔の定期点検を実演。設備情報と座標情報を入力・取得することで、誰でも安全に高品質な画像を取得","time":"10:05、11:00、12:00、13:00、14:00、15:00","image":"02.png"},
+      "geometry":{"type":"Point","coordinates":[1140,886]}},
+
+    { "type":"Feature","properties":{"id":"03","name":"四脚ロボット","detail":"四脚ロボットの稼働を実演。適用可能現場や映像取得等の説明","time":"10:05、11:00、12:00、13:00、14:00、15:00","image":"03.png"},
+      "geometry":{"type":"Point","coordinates":[1140,870]}},
+
+    { "type":"Feature","properties":{"id":"04","name":"運搬ドローン","detail":"ドローンを活用した資材運搬による作業環境のかいぜんに向けた取組紹介およびドローン運搬実演","time":"10:40、11:40、12:40、13:40、14:40、15:40","image":"04.png"},
+      "geometry":{"type":"Point","coordinates":[1140,854]}},
+
+    { "type":"Feature","properties":{"id":"05","name":"ドローンによる変電所巡視","detail":"設定航路を自動飛行するドローンによる変電所巡視を実演","time":"10:20、11:20、12:20、13:20、14:20、15:20","image":"05.png"},
+      "geometry":{"type":"Point","coordinates":[1140,807]}},
+
+    { "type":"Feature","properties":{"id":"06","name":"受変電キュービクルのセンシング技術","detail":"受変電設備向けの後付けできる状態監視ソリューションを紹介","time":"10:05、11:40、12:00、12:40、13:20、14:00、14:40、15:20","image":"06.png"},
+      "geometry":{"type":"Point","coordinates":[1140,791]}},
+
+    { "type":"Feature","properties":{"id":"07","name":"配電用伐採車両クアッドソー，フェラーバンチャ","detail":"配電用伐採車両2台を用いた伐採実演（枝打ち・丸太切り）","time":"10:20、11:00、11:40、13:00、13:40、14:20、15:00、15:40","image":"07.png"},
+      "geometry":{"type":"Point","coordinates":[1140,744]}},
+
+    { "type":"Feature","properties":{"id":"08","name":"間接活線工具","detail":"配電線の間接活線工法移行に向けて開発した、アシストアームおよび自家用仮送工具の実物展示","time":"","image":"08.png"},
+      "geometry":{"type":"Point","coordinates":[1140,729]}},
+
+    { "type":"Feature","properties":{"id":"09","name":"安全AIカメラを活用した墜落災害防止","detail":"送電墜落防止ハード対策のうち，安全カメラAIを使用した無胴綱状態の検知実演","time":"","image":"09.png"},
+      "geometry":{"type":"Point","coordinates":[1140,683]}},
+
+    { "type":"Feature","properties":{"id":"10","name":"高所作業車の逸走防止インターロック","detail":"高所作業車の逸走による災害を防止するための輪留めインターロック機構の実機展示","time":"","image":"10.png"},
+      "geometry":{"type":"Point","coordinates":[1140,667]}},
+
+    { "type":"Feature","properties":{"id":"11","name":"フォトスポット（変電所カード）","detail":"オリジナル変電所カード写真風を撮影","time":"","image":"11.png"},
+      "geometry":{"type":"Point","coordinates":[1140,620]}},
+
+    { "type":"Feature","properties":{"id":"12","name":"地中ケーブル用FRP製支持材","detail":"高寿命化，メンテフリーのFRP製ケーブル支持材の特長・仕様を実機展示","time":"","image":"12.png"},
+      "geometry":{"type":"Point","coordinates":[1140,520]}},
+
+    { "type":"Feature","properties":{"id":"13","name":"鉄塔用ボルト緩み止め金具　スマートスプリング","detail":"鉄塔ボルト緩み対策品HSEの改良版「スマートスプリング」の展示・取付実演","time":"","image":"13.png"},
+      "geometry":{"type":"Point","coordinates":[1140,503]}},
+
+    { "type":"Feature","properties":{"id":"14","name":"歩行用アシストスーツの山間部活用","detail":"歩行アシストスーツの導入による山地の送電作業における作業負担低減に向けた取組紹介および歩行体験","time":"","image":"14.png"},
+      "geometry":{"type":"Point","coordinates":[1140,487]}},
+
+    { "type":"Feature","properties":{"id":"15","name":"地中線埋設立会","detail":"ANDPADのLiDAR機能の実演、体験","time":"","image":"15.png"},
+      "geometry":{"type":"Point","coordinates":[1140,470]}},
+
+    { "type":"Feature","properties":{"id":"16","name":"ドローンシミュレータ訓練","detail":"ドローンシュミレータの導入による効率的な操縦技能習得環境の構築に向けた取組紹介と訓練体験","time":"","image":"16.png"},
+      "geometry":{"type":"Point","coordinates":[1140,455]}},
+
+    { "type":"Feature","properties":{"id":"17","name":"伐採ドローンの開発","detail":"ドローン活用による伐採作業の省力化に向けた取組紹介","time":"","image":"17.png"},
+      "geometry":{"type":"Point","coordinates":[1140,438]}},
+
+    { "type":"Feature","properties":{"id":"18","name":"自動昇木芯止め機","detail":"自動昇木機能付き芯止め機械（エディ）による芯止め作業の省力化に向けた取組紹介および実機展示","time":"","image":"18.png"},
+      "geometry":{"type":"Point","coordinates":[1140,421]}},
+
+    { "type":"Feature","properties":{"id":"19","name":"【出張 企画室】GAxIAプラットフォームサービス","detail":"教育・施工計画・設備保守業務等の高度化・効率化を支援するため、現場や設備の状況を高精度に3次元で再現します","time":"","image":"19.png"},
+      "geometry":{"type":"Point","coordinates":[1140,407]}},
+
+    { "type":"Feature","properties":{"id":"20","name":"状態監視保全システムによる変電設備のセンシング","detail":"実際に変電機器を動かす様子を見ながら、設備を見守る状態監視保全システムを分かりやすく紹介する体験展示","time":"","image":"20.png"},
+      "geometry":{"type":"Point","coordinates":[1140,358]}},
+
+    { "type":"Feature","properties":{"id":"21","name":"カーボンニュートラルの実現に向けた変電設備","detail":"カーボンニュートラル実現に向け、SF₆ガスレス機器の早期採用の必要性と当社の採用方針の紹介","time":"","image":"21.png"},
+      "geometry":{"type":"Point","coordinates":[1140,340]}},
+
+    { "type":"Feature","properties":{"id":"22","name":"植物油変圧器","detail":"植物油変圧器導入の紹介，鉱油と植物油の展示","time":"","image":"22.png"},
+      "geometry":{"type":"Point","coordinates":[1140,325]}},
+
+    { "type":"Feature","properties":{"id":"23","name":"変電機器の保守技術","detail":"変電機器の保守の実態や取り組み（直流電源装置を用いた対応）を断路器を用いて紹介。","time":"","image":"23.png"},
+      "geometry":{"type":"Point","coordinates":[1140,310]}},
+
+    { "type":"Feature","properties":{"id":"24","name":"エンジニアリング支援ツール","detail":"遮断器・変圧器の全台の更新時期をシミュレーションし保全計画・手の内化・予備品確保等をサポートする管理システムを紹介","time":"","image":"24.png"},
+      "geometry":{"type":"Point","coordinates":[1140,294]}},
+
+    { "type":"Feature","properties":{"id":"25","name":"海外コンサル事例","detail":"海外コンサルティングサービス事例の紹介","time":"","image":"25.png"},
+      "geometry":{"type":"Point","coordinates":[1140,277]}},
+
+    { "type":"Feature","properties":{"id":"26","name":"蓄電池を活用した水力マイクログリッド系統の安定化","detail":"水力発電を主電源としたマイクログリッド系統を安定化させる蓄電池制御システムを開発","time":"","image":"26.png"},
+      "geometry":{"type":"Point","coordinates":[1140,232]}},
+
+    { "type":"Feature","properties":{"id":"27","name":"AIを活用した配電設備の劣化判定","detail":"ＡＩを活用して配電設備の劣化傾向の把握・精緻化","time":"","image":"27.png"},
+      "geometry":{"type":"Point","coordinates":[1140,215]}},
+
+    { "type":"Feature","properties":{"id":"28","name":"ポリエチレン線カバーの水平リサイクル","detail":"ポリエチレン線カバーのリサイクルを紹介","time":"","image":"28.png"},
+      "geometry":{"type":"Point","coordinates":[1140,200]}},
+
+    { "type":"Feature","properties":{"id":"29","name":"柱上変圧器の絶縁油リサイクル","detail":"配電線用柱上変圧器の絶縁油リサイクルを紹介、鉱油とリサイクル油の展示","time":"","image":"29.png"},
+      "geometry":{"type":"Point","coordinates":[1140,185]}},
+
+    { "type":"Feature","properties":{"id":"30","name":"技術ＰＲ実績","detail":"中部電力パワーグリッドの技術ＰＲ実績紹介","time":"","image":"30.png"},  "geometry":{"type":"Point","coordinates":[1140,135]}},
+
+    { "type":"Feature","properties":{"id":"31","name":"コンサルティングサービス＆Conote","detail":"コンサルティングサービス＆Conoteの紹介（保全合理化・更新計画の策定・センシング・ケーブル・ドローン）","time":"","image":"31.png"},
+
+      "geometry":{"type":"Point","coordinates":[1140,120]}},
+
+    { "type":"Feature","properties":{"id":"32","name":"地域別電力需要予測システム（DFES）","detail":"近年急速に拡大するＤＥＲ（ＰＶ、ＥＶ，蓄電池、ヒートポンプ等）を加味した設備形成を実現する予測システムを紹介","time":"","image":"32.png"},
+      "geometry":{"type":"Point","coordinates":[1140,75]}},
+
+    { "type":"Feature","properties":{"id":"33","name":"ドローン・ウェアラブルカメラ等の映像を利用した地権者との境界立会","detail":"ドローン・ウェアラブルカメラ等の映像を利用した地権者との境界立会について紹介","time":"","image":"33.png"},
+      "geometry":{"type":"Point","coordinates":[1140,26]}},
+
+    { "type":"Feature","properties":{"id":"34","name":"ＡＩエージェントとの会話による交渉暗黙知の抽出","detail":"ＡＩエージェントとの会話による交渉暗黙知の抽出について紹介","time":"","image":"34.png"},
+      "geometry":{"type":"Point","coordinates":[1140,10]}},
+  ]
+};
+
+
+
+/* =========================================
+   5. 描画処理
+========================================= */
+
+function popupBase(p) {
+  let html = `
+    <div style="
+      font-weight: bold;
+      font-size: 15px;
+      margin-bottom: 6px;
+    ">
+      ${p.id} ${p.name}
+    </div>
+【概要】：${p.detail}
+  `;
+
+
+  // 実演時間（あれば表示）
+  if (p.time) {
+    html += `
+<div style="margin-top:4px;">
+【実演時間】：${p.time}
+</div>`;
+  }
+
+  // 画像がある場合のみ表示
+  if (p.image) {
+    html += `
+      <img src="${p.image}"
+           style="width:100%; margin-top:6px; border-radius:6px;">`;
+  }
+
+  return html;
+}
+
+
+
+
+function showBlinkMarkerById(id) {
+
+  highlightLayer.clearLayers();
+
+  outdoorBooths.features.forEach(function(f){
+
+    if (String(f.properties.id) === String(id)) {
+
+      const coord = f.geometry.coordinates;
+
+      const marker = L.marker(
+        [coord[1], coord[0]],
+        {
+          icon: L.divIcon({
+            className: "",
+            html: '<div class="blink-dot"></div>',
+            iconSize: [0,0],
+            iconAnchor: [12,8]
+          })
+        }
+      );
+
+      highlightLayer.addLayer(marker);
+
+      // ★5秒後に消える
+    setTimeout(() => {
+      marker.remove();  // ← こっちの方が安定
+    }, 5000);
+
+
+    }
+
+  });
+
+}
+
+
+// ★ 元の中心保存用（← 外に出す！！）
+let originalCenter = null;
+let originalZoom   = null;
+
+L.geoJSON(outdoorBooths, {
+
+  pointToLayer: (f, ll) =>
+    L.marker(ll, {
+      icon: L.divIcon({
+        className: "star-marker",
+        html: '<span style="font-size:30px; color:#000000; font-weight:bold;"> </span>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      })
+    }),
+
+  onEachFeature: (f, l) => {
+
+    l.on("click", () => {
+
+      // ★ 現在位置保存
+      originalCenter = map.getCenter();
+      originalZoom   = map.getZoom();
+
+      // ★ popup表示
+      L.popup({
+        autoPan: false
+      })
+        .setLatLng(l.getLatLng())
+        .setContent(popupBase(f.properties))
+        .openOn(map);
+
+  // ★ 中央補正
+         setTimeout(() => {
+
+      const popupEl = document.querySelector(".leaflet-popup");
+      if (!popupEl) return;
+
+      const popupRect = popupEl.getBoundingClientRect();
+      const mapRect   = map.getContainer().getBoundingClientRect();
+
+      // ★ Y方向
+      const popupCenterY = popupRect.top + popupRect.height / 2;
+      const mapCenterY   = mapRect.top + mapRect.height / 2;
+      const diffY = popupCenterY - mapCenterY;
+
+      // ★ X方向（追加）
+      const popupCenterX = popupRect.left + popupRect.width / 2;
+      const mapCenterX   = mapRect.left + mapRect.width / 2;
+      const diffX = popupCenterX - mapCenterX;
+
+      // ★ 両方向移動
+      map.panBy([diffX, diffY], { animate: true });
+}, 50);
+
+      // ★ 閉じたら戻す
+      map.once("popupclose", () => {
+        if (originalCenter) {
+          map.flyTo(originalCenter, originalZoom, {
+            animate: true,
+            duration: 0.4
+          });
+        }
+      });
+
+    });
+
+  }
+
+}).addTo(outdoorLayer);
+
+
+L.geoJSON(BoothsCheck, {
+  pointToLayer: (f, ll) =>
+    L.marker(ll, {
+      icon: L.divIcon({
+        className: "star-marker",
+        html: `
+<div style="
+  background: transparent;
+  width: 200px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+">
+  <span style="
+    font-size:24px;
+    color: transparent;
+    font-weight:bold;
+  ">
+  </span>
+</div>        `,
+        iconSize: [40, 40],
+        iconAnchor: [10, 10]
+      }),  // ← ★ここ重要（カンマ追加）
+
+      autoPanOnFocus: false,
+      keyboard: false
+    }),
+
+onEachFeature: (f, l) => {
+
+  if (!L.Browser.mobile) {
+
+    // ✅ PC（そのまま）
+    l.bindTooltip(`${f.properties.id} ${f.properties.name}`, {
+      direction: "right",
+      opacity: 0.9
+    });
+
+    l.on("click", () => {
+      showBlinkMarkerById(f.properties.id);
+      addCheckedItem(f.properties);
+    });
+
+  } else {
+
+    // ✅ スマホ（popup方式）
+
+    l.on("click", () => {
+      showBlinkMarkerById(f.properties.id);
+      const popupContent = `
+        <div style="font-size:14px;">
+          <b>${f.properties.id} ${f.properties.name}</b><br>
+          <button id="addBtn-${f.properties.id}"
+            style="
+              margin-top:6px;
+              padding:6px 10px;
+              background:#1d6fdc;
+              color:#fff;
+              border:none;
+              border-radius:4px;
+            "
+          >
+            チェック追加
+          </button>
+        </div>
+      `;
+
+      const popup = L.popup({
+        autoPan: true
+      })
+        .setLatLng(l.getLatLng())
+        .setContent(popupContent)
+        .openOn(map);
+
+      // ✅ ボタン確実に拾う
+      setTimeout(() => {
+        const btn = document.getElementById(`addBtn-${f.properties.id}`);
+        if (btn) {
+          btn.addEventListener("click", () => {
+            showBlinkMarkerById(f.properties.id);
+            addCheckedItem(f.properties);
+            map.closePopup(); // 閉じる
+          });
+        }
+      }, 0);
+
+    });
+
+  }
+}
+}).addTo(indoorLayer);
+
+
+
+
+/* =========================================
+   6. レイヤ切替（QR前提）
+========================================= */
+/* 初期表示 */
+outdoorLayer.addTo(map);
+indoorLayer.addTo(map);
+// ★起動時に呼ぶ
+loadChecked();
+</script>
+
+</body>
+</html>
