@@ -261,7 +261,7 @@ html, body {
 👉👉 2本指で地図操作（移動・拡大縮小）
   </div>
 <div id="walking-overlay">
-  🚫 歩行中は操作できません
+  🚫 歩行中は操作しないでください
 </div>
 </div>
 
@@ -468,34 +468,27 @@ function fadeOut() {
 
 
 // ==============================
-// 🚫 歩行検知（最終安定版）
+// 🚫 歩行中操作禁止（安定版）
 // ==============================
 
+let lastMoveTime = 0;
 let isWalking = false;
+
 const overlay = document.getElementById("walking-overlay");
 
-// 履歴
-let accelHistory = [];
-
-const WINDOW_SIZE = 6;
-const START_THRESHOLD = 18;
-const STOP_THRESHOLD  = 8;
-const STOP_TIME = 1500;
-
-let moveCount = 0;
-let lastMoveTime = Date.now();
-
-// ✅ iPhone対応
+// ✅ iPhone対応（初回タップで許可）
 if (typeof DeviceMotionEvent.requestPermission === "function") {
   document.body.addEventListener("click", async () => {
-    try { await DeviceMotionEvent.requestPermission(); }
-    catch(e){}
+    try {
+      const res = await DeviceMotionEvent.requestPermission();
+      console.log("motion permission:", res);
+    } catch (e) {
+      console.log("motion permission denied");
+    }
   }, { once: true });
 }
 
-// ==============================
-// 加速度検知
-// ==============================
+// ✅ 加速度検知
 window.addEventListener("devicemotion", (event) => {
 
   const acc = event.accelerationIncludingGravity;
@@ -506,59 +499,42 @@ window.addEventListener("devicemotion", (event) => {
     Math.abs(acc.y || 0) +
     Math.abs(acc.z || 0);
 
-  // 履歴更新
-  accelHistory.push(total);
-  if (accelHistory.length > WINDOW_SIZE) {
-    accelHistory.shift();
-  }
-
-  const avg =
-    accelHistory.reduce((a,b)=>a+b,0) / accelHistory.length;
-
-  // ✅ 歩行開始判定
-  if (avg > START_THRESHOLD) {
-    moveCount++;
-  } else {
-    moveCount = Math.max(0, moveCount - 1);
-  }
-
-  if (!isWalking && moveCount >= 4) {
-    isWalking = true;
-
-    overlay.style.display = "flex";
-    setTimeout(()=>overlay.style.opacity="1",10);
-
-    console.log("🚶 歩行開始");
-  }
-
-  // ✅ 歩行中のみ更新（超重要）
-  if (isWalking && avg > STOP_THRESHOLD) {
+  // ✅ 歩行っぽい揺れを検知
+  if (total > 17) {
     lastMoveTime = Date.now();
+
+    if (!isWalking) {
+      isWalking = true;
+
+      // フェードイン
+      overlay.style.display = "flex";
+      setTimeout(() => {
+        overlay.style.opacity = "1";
+      }, 10);
+    }
   }
 
 });
 
-// ==============================
-// 停止判定
-// ==============================
+// ✅ 停止判定（動き止まったら解除）
 setInterval(() => {
 
-  const diff = Date.now() - lastMoveTime;
+  if (Date.now() - lastMoveTime > 1500) {
 
-  if (isWalking && diff > STOP_TIME) {
+    if (isWalking) {
+      isWalking = false;
 
-    isWalking = false;
+      // フェードアウト
+      overlay.style.opacity = "0";
 
-    overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.style.display = "none";
+      }, 300);
+    }
 
-    setTimeout(()=>{
-      overlay.style.display = "none";
-    },300);
-
-    console.log("🛑 停止");
   }
 
-}, 200);
+}, 300);
 
 /* =========================================
    2. 構内図「イメージ」背景
