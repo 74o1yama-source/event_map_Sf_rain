@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>エンジフェア２０２６ ＷＥＢマップ（雨天版）</title>
+<title>エンジフェア２０２６ ＷＥＢマップ（安全第一！！_雨天版）</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- Leaflet CDN -->
@@ -468,27 +468,36 @@ function fadeOut() {
 
 
 // ==============================
-// 🚫 歩行中操作禁止（安定版）
+// 🚫 歩行検知（進化版・安定型）
 // ==============================
 
-let lastMoveTime = 0;
 let isWalking = false;
+let overlay = document.getElementById("walking-overlay");
 
-const overlay = document.getElementById("walking-overlay");
+// 履歴データ
+let accelHistory = [];
 
-// ✅ iPhone対応（初回タップで許可）
+// 設定値（チューニング可能）
+const WINDOW_SIZE = 6;       // 平均用
+const START_THRESHOLD = 15;  // 開始
+const STOP_THRESHOLD  = 10;  // 停止
+const MIN_CONTINUE = 4;      // 継続回数
+const STOP_TIME = 1800;      // 停止判定
+
+let moveCount = 0;
+let lastMoveTime = 0;
+
+// iPhone対応
 if (typeof DeviceMotionEvent.requestPermission === "function") {
   document.body.addEventListener("click", async () => {
-    try {
-      const res = await DeviceMotionEvent.requestPermission();
-      console.log("motion permission:", res);
-    } catch (e) {
-      console.log("motion permission denied");
-    }
+    try { await DeviceMotionEvent.requestPermission(); }
+    catch(e){}
   }, { once: true });
 }
 
-// ✅ 加速度検知
+// ==============================
+// 加速度検知
+// ==============================
 window.addEventListener("devicemotion", (event) => {
 
   const acc = event.accelerationIncludingGravity;
@@ -499,43 +508,64 @@ window.addEventListener("devicemotion", (event) => {
     Math.abs(acc.y || 0) +
     Math.abs(acc.z || 0);
 
-  // ✅ 歩行っぽい揺れを検知
-  if (total > 15) {
+  // 履歴追加
+  accelHistory.push(total);
+  if (accelHistory.length > WINDOW_SIZE) {
+    accelHistory.shift();
+  }
+
+  // 平均値算出
+  const avg =
+    accelHistory.reduce((a, b) => a + b, 0) /
+    accelHistory.length;
+
+  // ============================
+  // ▶ 歩行開始判定（平均＋継続）
+  // ============================
+  if (avg > START_THRESHOLD) {
+    moveCount++;
     lastMoveTime = Date.now();
+  } else {
+    moveCount = Math.max(0, moveCount - 1);
+  }
 
-    if (!isWalking) {
-      isWalking = true;
+  if (!isWalking && moveCount >= MIN_CONTINUE) {
+    isWalking = true;
 
-      // フェードイン
-      overlay.style.display = "flex";
-      setTimeout(() => {
-        overlay.style.opacity = "1";
-      }, 10);
-    }
+    overlay.style.display = "flex";
+    setTimeout(() => overlay.style.opacity = "1", 10);
+
+    console.log("🚶 歩行開始");
+  }
+
+  // ============================
+  // ▶ 歩行中の更新
+  // ============================
+  if (isWalking && avg > STOP_THRESHOLD) {
+    lastMoveTime = Date.now();
   }
 
 });
 
-// ✅ 停止判定（動き止まったら解除）
+// ==============================
+// ▶ 停止判定
+// ==============================
 setInterval(() => {
 
-  if (Date.now() - lastMoveTime > 1500) {
+  if (isWalking && (Date.now() - lastMoveTime > STOP_TIME)) {
 
-    if (isWalking) {
-      isWalking = false;
+    isWalking = false;
 
-      // フェードアウト
-      overlay.style.opacity = "0";
+    overlay.style.opacity = "0";
 
-      setTimeout(() => {
-        overlay.style.display = "none";
-      }, 300);
-    }
+    setTimeout(() => {
+      overlay.style.display = "none";
+    }, 300);
 
+    console.log("🛑 停止");
   }
 
 }, 300);
-
 
 /* =========================================
    2. 構内図「イメージ」背景
